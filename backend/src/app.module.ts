@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { CategoriesModule } from './categories/categories.module';
 import { ExpensesModule } from './expenses/expenses.module';
+import { IncomesModule } from './incomes/incomes.module';
 import { WalletsModule } from './wallets/wallets.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 
@@ -22,6 +23,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
     UsersModule,
     CategoriesModule,
     ExpensesModule,
+    IncomesModule,
     WalletsModule,
   ],
   controllers: [AppController],

@@ -5,6 +5,7 @@ export interface Category {
   name: string;
   userId: string;
   parentId?: string | null;
+  type?: string | null;
   createdAt: string;
   updatedAt: string;
   parent?: Category | null;

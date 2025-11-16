@@ -6,29 +6,30 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateExpenseDto } from './dto/create-expense.dto';
-import { UpdateExpenseDto } from './dto/update-expense.dto';
-import { ExpenseQueryDto } from './dto/expense-query.dto';
+import { CreateIncomeDto } from './dto/create-income.dto';
+import { UpdateIncomeDto } from './dto/update-income.dto';
+import { IncomeQueryDto } from './dto/income-query.dto';
 
 @Injectable()
-export class ExpensesService {
+export class IncomesService {
   constructor(private prisma: PrismaService) {}
 
-  async create(userId: string, createExpenseDto: CreateExpenseDto) {
-    // Kiểm tra category thuộc về user
+  async create(userId: string, createIncomeDto: CreateIncomeDto) {
+    // Kiểm tra category thuộc về user và là income category
     const category = await this.prisma.category.findFirst({
       where: {
-        id: createExpenseDto.categoryId,
+        id: createIncomeDto.categoryId,
         userId,
+        type: 'income',
       },
     });
 
     if (!category) {
-      throw new NotFoundException('Danh mục không tồn tại');
+      throw new NotFoundException('Danh mục thu nhập không tồn tại');
     }
 
     // Kiểm tra wallet nếu có (loại bỏ empty string)
-    const walletId = createExpenseDto.walletId?.trim() || null;
+    const walletId = createIncomeDto.walletId?.trim() || null;
     let wallet = null;
     if (walletId) {
       wallet = await this.prisma.wallet.findFirst({
@@ -41,24 +42,19 @@ export class ExpensesService {
       if (!wallet) {
         throw new NotFoundException('Ví không tồn tại');
       }
-
-      // Kiểm tra số dư đủ không
-      if (Number(wallet.balance) < createExpenseDto.amount) {
-        throw new BadRequestException('Số dư ví không đủ');
-      }
     }
 
     // Sử dụng transaction để đảm bảo tính nhất quán
-    const expense = await this.prisma.$transaction(async (tx) => {
-      // Tạo expense
-      const newExpense = await tx.expense.create({
+    const income = await this.prisma.$transaction(async (tx) => {
+      // Tạo income
+      const newIncome = await tx.income.create({
         data: {
           userId,
-          categoryId: createExpenseDto.categoryId,
+          categoryId: createIncomeDto.categoryId,
           walletId: walletId,
-          amount: createExpenseDto.amount,
-          description: createExpenseDto.description,
-          date: new Date(createExpenseDto.date),
+          amount: createIncomeDto.amount,
+          description: createIncomeDto.description,
+          date: new Date(createIncomeDto.date),
         },
         include: {
           category: {
@@ -76,26 +72,26 @@ export class ExpensesService {
         },
       });
 
-      // Trừ số dư từ wallet nếu có
+      // Cộng số dư vào wallet nếu có
       if (walletId && wallet) {
         await tx.wallet.update({
           where: { id: wallet.id },
           data: {
             balance: {
-              decrement: createExpenseDto.amount,
+              increment: createIncomeDto.amount,
             },
           },
         });
       }
 
-      return newExpense;
+      return newIncome;
     });
 
-    return expense;
+    return income;
   }
 
-  async findAll(userId: string, query: ExpenseQueryDto) {
-    const where: Prisma.ExpenseWhereInput = {
+  async findAll(userId: string, query: IncomeQueryDto) {
+    const where: Prisma.IncomeWhereInput = {
       userId,
     };
 
@@ -117,7 +113,7 @@ export class ExpensesService {
       where.walletId = query.walletId;
     }
 
-    const expenses = await this.prisma.expense.findMany({
+    const incomes = await this.prisma.income.findMany({
       where,
       include: {
         category: {
@@ -136,11 +132,11 @@ export class ExpensesService {
       orderBy: { date: 'desc' },
     });
 
-    return expenses;
+    return incomes;
   }
 
   async findOne(userId: string, id: string) {
-    const expense = await this.prisma.expense.findFirst({
+    const income = await this.prisma.income.findFirst({
       where: {
         id,
         userId,
@@ -161,35 +157,36 @@ export class ExpensesService {
       },
     });
 
-    if (!expense) {
-      throw new NotFoundException('Chi tiêu không tồn tại');
+    if (!income) {
+      throw new NotFoundException('Thu nhập không tồn tại');
     }
 
-    return expense;
+    return income;
   }
 
-  async update(userId: string, id: string, updateExpenseDto: UpdateExpenseDto) {
-    const expense = await this.findOne(userId, id);
+  async update(userId: string, id: string, updateIncomeDto: UpdateIncomeDto) {
+    const income = await this.findOne(userId, id);
 
-    // Nếu đổi category, kiểm tra category thuộc về user
-    if (updateExpenseDto.categoryId && updateExpenseDto.categoryId !== expense.categoryId) {
+    // Nếu đổi category, kiểm tra category thuộc về user và là income category
+    if (updateIncomeDto.categoryId && updateIncomeDto.categoryId !== income.categoryId) {
       const category = await this.prisma.category.findFirst({
         where: {
-          id: updateExpenseDto.categoryId,
+          id: updateIncomeDto.categoryId,
           userId,
+          type: 'income',
         },
       });
 
       if (!category) {
-        throw new NotFoundException('Danh mục không tồn tại');
+        throw new NotFoundException('Danh mục thu nhập không tồn tại');
       }
     }
 
     // Kiểm tra wallet mới nếu có thay đổi (loại bỏ empty string)
     let newWallet = null;
     let newWalletId = null;
-    if (updateExpenseDto.walletId !== undefined) {
-      const walletIdValue = updateExpenseDto.walletId?.trim() || null;
+    if (updateIncomeDto.walletId !== undefined) {
+      const walletIdValue = updateIncomeDto.walletId?.trim() || null;
       if (walletIdValue) {
         newWallet = await this.prisma.wallet.findFirst({
           where: {
@@ -207,41 +204,24 @@ export class ExpensesService {
 
     // Lấy wallet cũ nếu có
     let oldWallet = null;
-    if (expense.walletId) {
+    if (income.walletId) {
       oldWallet = await this.prisma.wallet.findFirst({
         where: {
-          id: expense.walletId,
+          id: income.walletId,
           userId,
         },
       });
     }
 
-    const oldAmount = Number(expense.amount);
-    const newAmount = updateExpenseDto.amount ? Number(updateExpenseDto.amount) : oldAmount;
-    const oldWalletId = expense.walletId;
-    if (updateExpenseDto.walletId === undefined) {
+    const oldAmount = Number(income.amount);
+    const newAmount = updateIncomeDto.amount ? Number(updateIncomeDto.amount) : oldAmount;
+    const oldWalletId = income.walletId;
+    if (updateIncomeDto.walletId === undefined) {
       newWalletId = oldWalletId;
     }
 
-    // Kiểm tra số dư nếu cần
-    if (newWalletId && newWallet) {
-      const currentBalance = Number(newWallet.balance);
-      // Nếu đổi wallet, cần kiểm tra số dư wallet mới
-      if (oldWalletId !== newWalletId) {
-        if (currentBalance < newAmount) {
-          throw new BadRequestException('Số dư ví không đủ');
-        }
-      } else {
-        // Cùng wallet nhưng đổi số tiền
-        const balanceChange = newAmount - oldAmount;
-        if (balanceChange > 0 && currentBalance < balanceChange) {
-          throw new BadRequestException('Số dư ví không đủ');
-        }
-      }
-    }
-
     // Sử dụng transaction để đảm bảo tính nhất quán
-    const updatedExpense = await this.prisma.$transaction(async (tx) => {
+    const updatedIncome = await this.prisma.$transaction(async (tx) => {
       // Xử lý cập nhật balance
       if (oldWalletId === newWalletId && oldWalletId) {
         // Cùng wallet, chỉ cần điều chỉnh chênh lệch amount
@@ -251,49 +231,49 @@ export class ExpensesService {
             where: { id: oldWallet.id },
             data: {
               balance: {
-                decrement: balanceChange, // Nếu newAmount > oldAmount thì trừ thêm, ngược lại thì cộng lại
+                increment: balanceChange, // Nếu newAmount > oldAmount thì cộng thêm, ngược lại thì trừ đi
               },
             },
           });
         }
       } else {
         // Khác wallet hoặc đổi từ có wallet sang không có wallet hoặc ngược lại
-        // Hoàn lại số dư cho wallet cũ nếu có
+        // Trừ lại số dư từ wallet cũ nếu có
         if (oldWalletId && oldWallet) {
           await tx.wallet.update({
             where: { id: oldWallet.id },
             data: {
               balance: {
-                increment: oldAmount,
+                decrement: oldAmount,
               },
             },
           });
         }
 
-        // Trừ số dư từ wallet mới nếu có
+        // Cộng số dư vào wallet mới nếu có
         if (newWalletId && newWallet) {
           await tx.wallet.update({
             where: { id: newWallet.id },
             data: {
               balance: {
-                decrement: newAmount,
+                increment: newAmount,
               },
             },
           });
         }
       }
 
-      // Cập nhật expense
-      const updated = await tx.expense.update({
+      // Cập nhật income
+      const updated = await tx.income.update({
         where: { id },
         data: {
-          ...(updateExpenseDto.amount && { amount: updateExpenseDto.amount }),
-          ...(updateExpenseDto.categoryId && { categoryId: updateExpenseDto.categoryId }),
-          ...(updateExpenseDto.description !== undefined && {
-            description: updateExpenseDto.description,
+          ...(updateIncomeDto.amount && { amount: updateIncomeDto.amount }),
+          ...(updateIncomeDto.categoryId && { categoryId: updateIncomeDto.categoryId }),
+          ...(updateIncomeDto.description !== undefined && {
+            description: updateIncomeDto.description,
           }),
-          ...(updateExpenseDto.date && { date: new Date(updateExpenseDto.date) }),
-          ...(updateExpenseDto.walletId !== undefined && {
+          ...(updateIncomeDto.date && { date: new Date(updateIncomeDto.date) }),
+          ...(updateIncomeDto.walletId !== undefined && {
             walletId: newWalletId,
           }),
         },
@@ -316,19 +296,19 @@ export class ExpensesService {
       return updated;
     });
 
-    return updatedExpense;
+    return updatedIncome;
   }
 
   async remove(userId: string, id: string) {
-    const expense = await this.findOne(userId, id);
+    const income = await this.findOne(userId, id);
 
     // Sử dụng transaction để đảm bảo tính nhất quán
     await this.prisma.$transaction(async (tx) => {
-      // Hoàn lại số dư cho wallet nếu có
-      if (expense.walletId) {
+      // Trừ lại số dư từ wallet nếu có
+      if (income.walletId) {
         const wallet = await tx.wallet.findFirst({
           where: {
-            id: expense.walletId,
+            id: income.walletId,
             userId,
           },
         });
@@ -338,24 +318,24 @@ export class ExpensesService {
             where: { id: wallet.id },
             data: {
               balance: {
-                increment: Number(expense.amount),
+                decrement: Number(income.amount),
               },
             },
           });
         }
       }
 
-      // Xóa expense
-      await tx.expense.delete({
+      // Xóa income
+      await tx.income.delete({
         where: { id },
       });
     });
 
-    return { message: 'Xóa chi tiêu thành công' };
+    return { message: 'Xóa thu nhập thành công' };
   }
 
-  async getAnalytics(userId: string, query: ExpenseQueryDto) {
-    const where: Prisma.ExpenseWhereInput = {
+  async getAnalytics(userId: string, query: IncomeQueryDto) {
+    const where: Prisma.IncomeWhereInput = {
       userId,
     };
 
@@ -378,7 +358,7 @@ export class ExpensesService {
     }
 
     // Tổng tiền
-    const totalResult = await this.prisma.expense.aggregate({
+    const totalResult = await this.prisma.income.aggregate({
       where,
       _sum: {
         amount: true,
@@ -389,7 +369,7 @@ export class ExpensesService {
     });
 
     // Thống kê theo category
-    const categoryStats = await this.prisma.expense.groupBy({
+    const categoryStats = await this.prisma.income.groupBy({
       by: ['categoryId'],
       where,
       _sum: {
@@ -423,7 +403,7 @@ export class ExpensesService {
     }));
 
     // Thống kê theo wallet
-    const walletStats = await this.prisma.expense.groupBy({
+    const walletStats = await this.prisma.income.groupBy({
       by: ['walletId'],
       where,
       _sum: {
@@ -459,7 +439,7 @@ export class ExpensesService {
     // Thống kê theo ngày
     let dailyStatsQuery = `
       SELECT date, SUM(amount) as total
-      FROM expenses
+      FROM incomes
       WHERE user_id = $1
     `;
     const queryParams: any[] = [userId];
@@ -510,7 +490,7 @@ export class ExpensesService {
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
-    const result = await this.prisma.expense.aggregate({
+    const result = await this.prisma.income.aggregate({
       where: {
         userId,
         date: {
@@ -536,7 +516,7 @@ export class ExpensesService {
     end.setDate(end.getDate() + 6);
     end.setHours(23, 59, 59, 999);
 
-    const result = await this.prisma.expense.aggregate({
+    const result = await this.prisma.income.aggregate({
       where: {
         userId,
         date: {
@@ -562,7 +542,7 @@ export class ExpensesService {
     const end = new Date(year, month, 0);
     end.setHours(23, 59, 59, 999);
 
-    const result = await this.prisma.expense.aggregate({
+    const result = await this.prisma.income.aggregate({
       where: {
         userId,
         date: {

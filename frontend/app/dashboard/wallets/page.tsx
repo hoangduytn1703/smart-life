@@ -15,10 +15,12 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { AmountInput } from '@/components/ui/amount-input';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
+import { formatCurrency } from '@/lib/utils';
 import { 
   Plus, 
   Pencil, 
@@ -43,6 +45,7 @@ const walletSchema = z.object({
   includedInTotal: z.boolean().default(true),
   icon: z.string().optional(),
   color: z.string().optional(),
+  balance: z.number().min(0, 'Số dư không được âm').optional(),
 });
 
 const transferSchema = z.object({
@@ -86,6 +89,7 @@ export default function WalletsPage() {
       includedInTotal: true,
       icon: '💼',
       color: '#3b82f6',
+      balance: 0,
     },
   });
 
@@ -209,6 +213,7 @@ export default function WalletsPage() {
     setValue('includedInTotal', wallet.includedInTotal);
     setValue('icon', wallet.icon || '💼');
     setValue('color', wallet.color || '#3b82f6');
+    setValue('balance', Number(wallet.balance));
     setIsDialogOpen(true);
   };
 
@@ -259,13 +264,6 @@ export default function WalletsPage() {
   const includedWallets = wallets.filter((w) => w.includedInTotal);
   const excludedWallets = wallets.filter((w) => !w.includedInTotal);
   const totalBalance = totalBalanceData?.data?.totalBalance || 0;
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-    }).format(amount);
-  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -503,28 +501,55 @@ export default function WalletsPage() {
             </DialogHeader>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-gray-700 font-medium">Tên ví *</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="Ví dụ: Ví tiền mặt, Ngân hàng..."
-                  className="border-gray-300 focus:border-gray-400 focus:ring-gray-400"
-                  {...register('name')}
-                />
-                {errors.name && (
-                  <p className="text-sm text-red-600">{errors.name.message}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="icon" className="text-gray-700 font-medium">Icon</Label>
-                <Input
-                  id="icon"
-                  type="text"
-                  placeholder="💼"
-                  className="border-gray-300 focus:border-gray-400 focus:ring-gray-400"
-                  {...register('icon')}
-                />
+                <Label className="text-gray-700 font-medium">Tên ví *</Label>
+                <div className="flex gap-2">
+                  <div className="w-20">
+                    <Select
+                      value={watch('icon') || '💼'}
+                      onValueChange={(value) => setValue('icon', value)}
+                    >
+                      <SelectTrigger className="border-gray-300 focus:border-gray-400 focus:ring-gray-400 h-10">
+                        <SelectValue>
+                          <span className="text-xl">{watch('icon') || '💼'}</span>
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="💼">💼</SelectItem>
+                        <SelectItem value="💰">💰</SelectItem>
+                        <SelectItem value="💳">💳</SelectItem>
+                        <SelectItem value="🏦">🏦</SelectItem>
+                        <SelectItem value="💵">💵</SelectItem>
+                        <SelectItem value="💸">💸</SelectItem>
+                        <SelectItem value="💴">💴</SelectItem>
+                        <SelectItem value="💶">💶</SelectItem>
+                        <SelectItem value="💷">💷</SelectItem>
+                        <SelectItem value="🪙">🪙</SelectItem>
+                        <SelectItem value="💎">💎</SelectItem>
+                        <SelectItem value="🏧">🏧</SelectItem>
+                        <SelectItem value="📊">📊</SelectItem>
+                        <SelectItem value="💼">💼</SelectItem>
+                        <SelectItem value="🎯">🎯</SelectItem>
+                        <SelectItem value="⭐">⭐</SelectItem>
+                        <SelectItem value="🔥">🔥</SelectItem>
+                        <SelectItem value="✨">✨</SelectItem>
+                        <SelectItem value="🎁">🎁</SelectItem>
+                        <SelectItem value="🎉">🎉</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex-1">
+                    <Input
+                      id="name"
+                      type="text"
+                      placeholder="Ví dụ: Ví tiền mặt, Ngân hàng..."
+                      className="border-gray-300 focus:border-gray-400 focus:ring-gray-400"
+                      {...register('name')}
+                    />
+                    {errors.name && (
+                      <p className="text-sm text-red-600 mt-1">{errors.name.message}</p>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -535,6 +560,21 @@ export default function WalletsPage() {
                   className="h-12 border-gray-300 focus:border-gray-400 focus:ring-gray-400"
                   {...register('color')}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="balance" className="text-gray-700 font-medium">
+                  Số dư ban đầu
+                </Label>
+                <AmountInput
+                  id="balance"
+                  value={watch('balance') || 0}
+                  onChange={(value) => setValue('balance', value, { shouldValidate: true })}
+                  className="border-gray-300 focus:border-gray-400 focus:ring-gray-400"
+                />
+                {errors.balance && (
+                  <p className="text-sm text-red-600 mt-1">{errors.balance.message}</p>
+                )}
               </div>
 
               <div className="flex items-center justify-between">

@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { CategorySelect } from '@/components/ui/category-select';
 import { AmountInput } from '@/components/ui/amount-input';
 import { FlowbiteDatepicker } from '@/components/ui/datepicker';
 import { useForm } from 'react-hook-form';
@@ -32,6 +33,7 @@ import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, Calendar, Wallet } from 'lucide-react';
 import { format } from 'date-fns';
+import { formatCurrency } from '@/lib/utils';
 
 const expenseSchema = z.object({
   amount: z.number().min(0.01, 'Số tiền phải lớn hơn 0'),
@@ -83,6 +85,8 @@ export default function ExpensesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['expenses', 'analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['wallets'] });
+      queryClient.invalidateQueries({ queryKey: ['wallets', 'total-balance'] });
       toast({
         title: 'Thành công',
         description: 'Tạo chi tiêu thành công',
@@ -104,6 +108,8 @@ export default function ExpensesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['expenses', 'analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['wallets'] });
+      queryClient.invalidateQueries({ queryKey: ['wallets', 'total-balance'] });
       toast({
         title: 'Thành công',
         description: 'Cập nhật chi tiêu thành công',
@@ -126,6 +132,8 @@ export default function ExpensesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       queryClient.invalidateQueries({ queryKey: ['expenses', 'analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['wallets'] });
+      queryClient.invalidateQueries({ queryKey: ['wallets', 'total-balance'] });
       toast({
         title: 'Thành công',
         description: 'Xóa chi tiêu thành công',
@@ -205,7 +213,7 @@ export default function ExpensesPage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <h3 className="text-lg font-semibold">
-                        {expense.amount.toLocaleString('vi-VN')} đ
+                        {formatCurrency(expense.amount)} đ
                       </h3>
                       <span className="px-2 py-1 bg-primary/10 text-primary text-xs rounded">
                         {expense.category.name}
@@ -249,7 +257,15 @@ export default function ExpensesPage() {
       )}
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent
+          onInteractOutside={(e) => {
+            // Prevent dialog from closing when clicking on datepicker dropdown
+            const target = e.target as HTMLElement;
+            if (target.closest('.datepicker-dropdown')) {
+              e.preventDefault();
+            }
+          }}
+        >
           <DialogHeader>
             <DialogTitle>{editingExpense ? 'Chỉnh sửa chi tiêu' : 'Thêm chi tiêu mới'}</DialogTitle>
             <DialogDescription>
@@ -273,21 +289,12 @@ export default function ExpensesPage() {
 
             <div className="space-y-2">
               <Label htmlFor="categoryId">Danh mục *</Label>
-              <Select
+              <CategorySelect
+                categories={categories}
                 value={watch('categoryId')}
                 onValueChange={(value) => setValue('categoryId', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Chọn danh mục" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Chọn danh mục"
+              />
               {errors.categoryId && (
                 <p className="text-sm text-destructive">{errors.categoryId.message}</p>
               )}

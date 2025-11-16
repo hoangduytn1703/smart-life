@@ -20,6 +20,7 @@ model User {
 
   categories Category[]
   expenses   Expense[]
+  incomes    Income[]
   wallets    Wallet[]
 
   @@map("users")
@@ -30,6 +31,7 @@ model Category {
   userId    String    @map("user_id")
   name      String
   parentId  String?   @map("parent_id")
+  type      String?   @default("expense") // "expense" or "income"
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 
@@ -37,9 +39,11 @@ model Category {
   parent     Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
   children   Category[]  @relation("CategoryHierarchy")
   expenses   Expense[]
+  incomes    Income[]
 
   @@unique([userId, name, parentId])
   @@index([parentId])
+  @@index([userId, type])
   @@map("categories")
 }
 
@@ -64,6 +68,27 @@ model Expense {
   @@map("expenses")
 }
 
+model Income {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  categoryId  String   @map("category_id")
+  walletId    String?  @map("wallet_id")
+  amount      Decimal  @db.Decimal(15, 2)
+  description String?
+  date        DateTime @db.Date
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  wallet   Wallet?  @relation(fields: [walletId], references: [id], onDelete: SetNull)
+
+  @@index([userId, date])
+  @@index([userId, categoryId])
+  @@index([userId, walletId])
+  @@map("incomes")
+}
+
 model Wallet {
   id          String    @id @default(uuid())
   userId      String    @map("user_id")
@@ -78,6 +103,7 @@ model Wallet {
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   expenses Expense[]
+  incomes  Income[]
 
   @@index([userId])
   @@index([userId, order])

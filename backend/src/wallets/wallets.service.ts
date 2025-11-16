@@ -38,7 +38,7 @@ export class WalletsService {
       data: {
         userId,
         name: createWalletDto.name,
-        balance: 0,
+        balance: createWalletDto.balance ?? 0,
         includedInTotal: createWalletDto.includedInTotal ?? true,
         icon: createWalletDto.icon || '💼',
         color: createWalletDto.color || '#3b82f6',

@@ -20,6 +20,7 @@ import { FlowbiteDatepicker } from '@/components/ui/datepicker';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { Calendar, TrendingUp, DollarSign } from 'lucide-react';
+import { formatCurrency } from '@/lib/utils';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
 
@@ -98,12 +99,6 @@ export default function ReportsPage() {
       .sort((a, b) => a.date.localeCompare(b.date));
   }, [expenses]);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-    }).format(amount);
-  };
 
   const handleQuickDate = (months: number) => {
     const date = new Date();
@@ -277,14 +272,17 @@ export default function ReportsPage() {
                         nameKey="name"
                         cx="50%"
                         cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                         outerRadius={80}
-                        label={(entry) => `${entry.name}: ${formatCurrency(entry.amount)}`}
+                        fill="#8884d8"
                       >
                         {categoryBreakdown.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                      <Tooltip formatter={(value: number) => `${formatCurrency(value)} đ`} />
+                      <Legend />
                     </PieChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -308,14 +306,17 @@ export default function ReportsPage() {
                         nameKey="name"
                         cx="50%"
                         cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                         outerRadius={80}
-                        label={(entry) => `${entry.name}: ${formatCurrency(entry.amount)}`}
+                        fill="#8884d8"
                       >
                         {walletBreakdown.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                      <Tooltip formatter={(value: number) => `${formatCurrency(value)} đ`} />
+                      <Legend />
                     </PieChart>
                   </ResponsiveContainer>
                 </CardContent>

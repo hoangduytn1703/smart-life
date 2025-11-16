@@ -19,6 +19,7 @@ export interface CreateWalletDto {
   icon?: string;
   color?: string;
   order?: number;
+  balance?: number;
 }
 
 export interface UpdateWalletDto {
@@ -27,6 +28,7 @@ export interface UpdateWalletDto {
   icon?: string;
   color?: string;
   order?: number;
+  balance?: number;
 }
 
 export interface TransferMoneyDto {

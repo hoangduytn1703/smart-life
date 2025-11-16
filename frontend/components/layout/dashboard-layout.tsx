@@ -53,9 +53,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-50 relative pointer-events-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-16 relative z-50 pointer-events-auto">
             <div className="flex items-center">
               <Link href="/dashboard" className="text-xl font-bold text-primary">
                 Quản lý chi tiêu
@@ -63,12 +63,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
 
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex space-x-1">
+            <nav className="hidden md:flex space-x-1 relative z-50 pointer-events-auto">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <Link key={item.href} href={item.href}>
-                    <Button variant="ghost" className="flex items-center gap-2">
+                  <Link key={item.href} href={item.href} className="pointer-events-auto">
+                    <Button variant="ghost" className="flex items-center gap-2 relative z-50 pointer-events-auto">
                       <Icon className="h-4 w-4" />
                       {item.label}
                     </Button>
@@ -78,7 +78,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </nav>
 
             {/* User Menu */}
-            <div className="hidden md:flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-4 relative z-50 pointer-events-auto">
               {user && (
                 <div className="text-sm">
                   <div className="font-medium">{user.name}</div>
@@ -108,7 +108,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* Mobile Navigation */}
         {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-200">
+          <div className="md:hidden border-t border-gray-200 relative z-[110]">
             <nav className="px-4 py-2 space-y-1">
               {navItems.map((item) => {
                 const Icon = item.icon;

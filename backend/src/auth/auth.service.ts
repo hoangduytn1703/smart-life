@@ -268,6 +268,7 @@ export class AuthService {
         data: {
           userId,
           name: categoryData.name,
+          type: 'expense',
         },
       });
 
@@ -280,6 +281,45 @@ export class AuthService {
             userId,
             name: childName,
             parentId: parent.id,
+            type: 'expense',
+          })),
+        });
+      }
+    }
+
+    // Tạo income categories
+    const incomeCategoriesData = [
+      {
+        name: '💰 Lương',
+        children: ['Lương cứng', 'Freelance', 'OT'],
+      },
+      {
+        name: '🛒 Bán hàng',
+        children: [],
+      },
+      {
+        name: '💵 Thu nhập khác',
+        children: [],
+      },
+    ];
+
+    for (const categoryData of incomeCategoriesData) {
+      const parent = await this.prisma.category.create({
+        data: {
+          userId,
+          name: categoryData.name,
+          type: 'income',
+        },
+      });
+
+      // Tạo children categories
+      if (categoryData.children.length > 0) {
+        await this.prisma.category.createMany({
+          data: categoryData.children.map((childName) => ({
+            userId,
+            name: childName,
+            parentId: parent.id,
+            type: 'income',
           })),
         });
       }
