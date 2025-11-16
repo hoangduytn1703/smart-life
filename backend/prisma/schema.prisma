@@ -1,0 +1,86 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  password  String
+  name      String
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  categories Category[]
+  expenses   Expense[]
+  wallets    Wallet[]
+
+  @@map("users")
+}
+
+model Category {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  name      String
+  parentId  String?   @map("parent_id")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent     Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children   Category[]  @relation("CategoryHierarchy")
+  expenses   Expense[]
+
+  @@unique([userId, name, parentId])
+  @@index([parentId])
+  @@map("categories")
+}
+
+model Expense {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  categoryId  String   @map("category_id")
+  walletId    String?  @map("wallet_id")
+  amount      Decimal  @db.Decimal(15, 2)
+  description String?
+  date        DateTime @db.Date
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  wallet   Wallet?  @relation(fields: [walletId], references: [id], onDelete: SetNull)
+
+  @@index([userId, date])
+  @@index([userId, categoryId])
+  @@index([userId, walletId])
+  @@map("expenses")
+}
+
+model Wallet {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  name        String
+  balance     Decimal   @default(0) @db.Decimal(15, 2)
+  includedInTotal Boolean @default(true) @map("included_in_total")
+  icon        String?   @default("💼")
+  color       String?   @default("#3b82f6")
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expenses Expense[]
+
+  @@index([userId])
+  @@index([userId, order])
+  @@map("wallets")
+}
+
